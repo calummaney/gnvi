@@ -112,7 +112,7 @@ rasterize(cam_vs_areas,y = dem_cam,field = "vs_weightedimpact",fun="mean") |> pl
 
 rasterize(cam_vs_areas,y = dem_cam,field = "sizebyimpact",fun="mean") |> plot(main = "Impact score multiplied by viewshed size (Natural Views)")
 
-rasterize(cam_vs_areas,y = dem_cam,field = "sizebyweightedimpact",fun="mean") |> plot(main = "Weighted mpact score multiplied by viewshed size (Natural Views)")
+rasterize(cam_vs_areas,y = dem_cam,field = "sizebyweightedimpact",fun="mean") |> plot(main = "Weighted impact score multiplied by viewshed size (Natural Views)")
 ```
 
 ## Analyse results
