@@ -1,0 +1,122 @@
+---
+title: "GNVI"
+format: html
+editor: visual
+---
+
+## Viewsheds of natural condition
+
+The aim of this code is to produce maps of effective viewshed size, weighted by a layer describing the natural condition of landscapes.
+
+For the viewsheds, we use DEM data
+
+For the "natural conditions" we use the Human Modification Index.
+
+We use three geographic case studies to illustrate the methods, in Cambridgeshire, UK, Palani, India, and Bogota, Colombia.
+
+## Setup: load libraries, load data
+
+```{r setup}
+library(tidyverse)
+library(terra)
+library(sf)
+library(viewscape)
+
+#Load DEM datasets
+dem_cam <- rast("raw data/cam_final_dem.tif")
+dem_cam[dem_cam==0] <- NA
+hm_cam <- rast("raw data/cam_masked_hm.tif")
+hm_cam[hm_cam==0] <- NA
+points_cam <- read_sf("raw data/cam_clipped_regular_points.shp")
+
+
+points_cam <- terra::as.points(dem_cam) |> st_as_sf() |> sample_n(2000)
+```
+
+## Define functions
+
+Function to calculate our metrics of interest (viewscape size and mean HM within viewshed)
+
+```{r}
+hmstats <- function(vs,dem,hm){
+  shed <- visual_magnitude(viewshed = vs,dsm = dem)
+  
+  vs_mask <- shed / shed
+  
+  vs_area <- sum(values(vs_mask),na.rm=T)
+  
+  hm_shed <- resample(hm,shed) |> mask(shed)
+  
+  vs_meanhm <- mean(values(hm_shed),na.rm=T)
+  
+  vs_hm_weighted <- hm_shed * shed
+  
+  vs_meanhm_weighted <- weighted.mean(values(hm_shed),values(shed),na.rm=T)
+
+  return(list(
+    vs_area = vs_area,
+    vs_impact = vs_meanhm,
+    vs_weightedimpact = vs_meanhm_weighted
+  ))
+}
+```
+
+Function to bind our metrics to the point data - this function will call our "generate stats" function
+
+```{r}
+bindstatstopoints <- function(points,dem,r,hm){
+  region_vs <- compute_viewshed(
+  dsm = dem,
+  viewpoints=points,
+  r = r
+  )
+  
+  stats_vs <- lapply(region_vs,hmstats,dem = dem,hm = hm)
+  
+  points$vs_area <- lapply(stats_vs,function(x){x$vs_area}) |> unlist()
+  
+  points$vs_impact <- lapply(stats_vs,function(x){x$vs_impact}) |> unlist()
+  
+  points$vs_weightedimpact <- lapply(stats_vs,function(x){x$vs_weightedimpact}) |> unlist()
+
+  
+  return(points)
+}
+```
+
+## Test functions and calculate metrics
+
+Start by computing viewsheds for every point in the sampled dataset
+
+```{r}
+cam_vs_stats <- bindstatstopoints(points = points_cam,dem=dem_cam,r=10000,hm=hm_cam)
+
+cam_vs_stats$sizebyimpact <- cam_vs_stats$vs_area * (1-cam_vs_stats$vs_impact)
+cam_vs_stats$sizebyweightedimpact <- cam_vs_stats$vs_area * (1-cam_vs_stats$vs_weightedimpact)
+
+```
+
+## Visualise results
+
+```{r}
+cam_vs_areas <- cam_vs_stats |> st_buffer(1000)
+
+plot(dem_cam)
+plot(hm_cam)
+
+rasterize(cam_vs_areas,y = dem_cam,field = "vs_area",fun="mean") |> plot(main = "Viewshed-level total area (km^2)")
+
+rasterize(cam_vs_areas,y = dem_cam,field = "vs_impact",fun="mean") |> plot(main="Viewshed-level mean impacts")
+
+rasterize(cam_vs_areas,y = dem_cam,field = "vs_weightedimpact",fun="mean") |> plot(main = "Mean impact weighted by proportion of view")
+
+rasterize(cam_vs_areas,y = dem_cam,field = "sizebyimpact",fun="mean") |> plot(main = "Impact score multiplied by viewshed size (Natural Views)")
+
+rasterize(cam_vs_areas,y = dem_cam,field = "sizebyweightedimpact",fun="mean") |> plot(main = "Weighted mpact score multiplied by viewshed size (Natural Views)")
+```
+
+## Analyse results
+
+```{r}
+
+```
