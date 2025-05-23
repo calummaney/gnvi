@@ -1,1 +1,1 @@
-This repo contains the scripts and data for testing a "natural views index" combining people-centric perceptions, human pressure layers, and iewshed analyses to detect where on Earth "gets the best views of nature". 
+This repo contains the scripts and data for testing a "natural views index" combining people-centric perceptions, human pressure layers, and viewshed analyses to detect where on Earth "gets the best views of nature". 
